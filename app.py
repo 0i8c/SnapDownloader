@@ -1,19 +1,20 @@
-import os, re, requests
+import os, re, requests, logging
 from flask import Flask, render_template_string, request, jsonify, Response, stream_with_context
 import yt_dlp
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
-# إعدادات قوية جداً لمحاكاة متصفح حقيقي
+# إعدادات قصوى لمحاكاة بشري حقيقي وتجاوز الحظر
 YDL_OPTS = {
     'format': 'best',
-    'quiet': True,
-    'no_warnings': True,
+    'quiet': False,
+    'no_warnings': False,
     'noplaylist': True,
-    'extract_flat': False,
-    'http_headers': {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': '*/*',
+    'headers': {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-us',
         'Referer': 'https://www.snapchat.com/',
     }
 }
@@ -22,47 +23,44 @@ HTML = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محفظ الفيديو Pro</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S-DL PRO</title>
     <style>
-        :root { --p: #1e293b; --a: #3b82f6; }
-        body { margin: 0; background: #f8fafc; font-family: -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card { background: #fff; padding: 40px; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
-        h1 { color: var(--p); font-size: 24px; margin-bottom: 30px; }
-        input { width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 20px; box-sizing: border-box; font-size: 16px; outline: none; }
-        button { background: var(--p); color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; font-weight: bold; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        button:disabled { background: #94a3b8; }
-        #res { margin-top: 30px; display: none; }
-        .dl-btn { background: var(--a); color: white; padding: 16px; text-decoration: none; border-radius: 12px; display: block; font-weight: bold; }
+        body { margin: 0; background: #0f172a; font-family: system-ui, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; color: #fff; }
+        .card { background: #1e293b; padding: 40px; border-radius: 24px; width: 90%; max-width: 400px; text-align: center; border: 1px solid #334155; }
+        input { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #334155; background: #0f172a; color: #fff; margin-bottom: 20px; box-sizing: border-box; }
+        button { background: #3b82f6; color: #fff; border: none; padding: 16px; width: 100%; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        #res { margin-top: 30px; display: none; padding: 20px; background: #064e3b; border-radius: 12px; }
+        .dl-btn { background: #10b981; color: white; padding: 14px; text-decoration: none; border-radius: 10px; display: block; margin-top: 10px; font-weight: 700; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h1>محفظ الفيديو</h1>
-        <input type="text" id="url" placeholder="الصق الرابط هنا..." autocomplete="off">
-        <button onclick="start()" id="btn">معالجة الفيديو</button>
+        <h2>محفظ الفيديو Pro</h2>
+        <input type="text" id="url" placeholder="الصق الرابط هنا...">
+        <button onclick="start()" id="btn">استخراج الآن</button>
         <div id="res">
-            <p style="color: #059669; font-weight: 600; margin-bottom: 15px;">تم التجهيز بنجاح! ✅</p>
-            <a id="link" href="#" class="dl-btn">حفظ في الجهاز</a>
+            <span>جاهز للتحميل ✅</span>
+            <a id="link" href="#" class="dl-btn">حفظ الفيديو</a>
         </div>
+        <p id="err" style="color: #ef4444; margin-top: 20px; font-size: 13px; display: none;"></p>
     </div>
     <script>
         async function start() {
             const u = document.getElementById('url').value;
-            if(!u) return;
             const b = document.getElementById('btn');
-            b.innerText = 'جاري كسر التشفير...'; b.disabled = true;
-            document.getElementById('res').style.display = 'none';
+            const e = document.getElementById('err');
+            if(!u) return;
+            b.innerText = 'جاري كسر الحماية...'; b.disabled = true; e.style.display = 'none';
             try {
                 const r = await fetch('/api/extract', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({url: u}) });
                 const d = await r.json();
                 if(d.success) {
                     document.getElementById('link').href = '/download?v=' + encodeURIComponent(d.url);
                     document.getElementById('res').style.display = 'block';
-                } else { alert('فشل الاستخراج. تأكد أن الرابط عام.'); }
-            } catch { alert('خطأ فني في السيرفر'); }
-            finally { b.innerText = 'معالجة الفيديو'; b.disabled = false; }
+                } else { e.innerText = 'السبب: ' + d.error; e.style.display = 'block'; }
+            } catch { e.innerText = 'فشل الاتصال بالسيرفر'; e.style.display = 'block'; }
+            finally { b.innerText = 'استخراج الآن'; b.disabled = false; }
         }
     </script>
 </body>
@@ -70,8 +68,8 @@ HTML = """
 """
 
 def clean_url(u):
-    # محرك البحث عن المعرف الفريد للفيديو (Spotlight ID)
-    match = re.search(r'spotlight/([A-Za-z0-9_-]+)', u)
+    # تنظيف فائق للرابط لاستخراج المعرف فقط
+    match = re.search(r'spotlight/([^?&/]+)', u)
     if match:
         return f"https://www.snapchat.com/spotlight/{match.group(1)}"
     return u
@@ -86,14 +84,15 @@ def extract():
         with yt_dlp.YoutubeDL(YDL_OPTS) as ydl:
             info = ydl.extract_info(u, download=False)
             return jsonify({'success': True, 'url': info.get('url')})
-    except: return jsonify({'success': False})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)[:100]})
 
 @app.route('/download')
 def download():
     v = request.args.get('v')
-    r = requests.get(v, stream=True)
+    r = requests.get(v, stream=True, headers={'User-Agent': 'Mozilla/5.0'})
     return Response(stream_with_context(r.iter_content(chunk_size=1024*10)), 
-                    headers={"Content-Disposition": "attachment; filename=snap_video.mp4", "Content-Type": "video/mp4"})
+                    headers={"Content-Disposition": "attachment; filename=video.mp4", "Content-Type": "video/mp4"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
