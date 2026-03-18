@@ -3,4 +3,5 @@ uvicorn
 gunicorn
 httpx
 aiofiles
-cachetools
+pydantic
+
