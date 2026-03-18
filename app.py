@@ -1,32 +1,75 @@
 import os
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+import re
+import json
+import uuid
+import asyncio
+import aiofiles
 import httpx
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
+from pydantic import BaseModel
 
 app = FastAPI()
 
-# التأكد من وجود ملف index.html وقراءته
+# --- محرك الاستخراج V7 ---
+def get_snap_video_v7(data: dict) -> list:
+    urls = set()
+    try:
+        # مسار Spotlight
+        spot = data.get('props', {}).get('pageProps', {}).get('spotlightParams', {}).get('snap', {}).get('mediaUrl')
+        if spot: urls.add(spot)
+        # مسار القصص
+        snaps = data.get('props', {}).get('pageProps', {}).get('story', {}).get('snaps', [])
+        for s in snaps:
+            m = s.get('media', {}).get('mediaUrl')
+            if m: urls.add(m)
+    except: pass
+    return list(urls)
+
+# --- عرض الواجهة الزجاجية ---
 @app.get("/", response_class=HTMLResponse)
-async def read_index():
-    try:
-        with open("index.html", "r", encoding="utf-8") as f:
-            return f.read()
-    except Exception as e:
-        return f"<h1>خطأ في قراءة ملف index.html: {str(e)}</h1>"
+async def serve_home():
+    # يبحث عن الملف بأي اسم محتمل لتجنب الخطأ
+    for filename in ["index.html", "index.html.txt", "indox.html"]:
+        if os.path.exists(filename):
+            async with aiofiles.open(filename, "r", encoding="utf-8") as f:
+                return HTMLResponse(content=await f.read())
+    return HTMLResponse(content="<h1>خطأ: لم يتم العثور على ملف index.html في المستودع!</h1>", status_code=404)
 
-# مسار تجريبي للتأكد أن السيرفر يستجيب
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "message": "NEXUS IS ALIVE"}
+# --- معالج التحميل ---
+class SnapUrl(BaseModel):
+    url: str
 
-# مسار التحميل (API)
 @app.post("/api/download")
-async def download_video(request: Request):
-    try:
-        data = await request.json()
-        url = data.get("url")
-        # هنا المحرك يشتغل.. للآن بنرجع استجابة تجريبية للتأكد من الربط
-        return {"success": True, "video_url": "#", "size_mb": "0.0", "method": "Connected"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+async def start_download(req: SnapUrl):
+    target = req.url.strip()
+    headers = {"User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4)"}
+    
+    async with httpx.AsyncClient(follow_redirects=True, timeout=20.0) as client:
+        try:
+            resp = await client.get(target, headers=headers)
+            match = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', resp.text, re.DOTALL)
+            if not match: return {"success": False, "error": "فشل المحرك في العثور على بيانات الفيديو."}
+            
+            data = json.loads(match.group(1))
+            urls = get_snap_video_v7(data)
+            if not urls: return {"success": False, "error": "لم يتم العثور على روابط خام (RAW)."}
+            
+            clean_url = urls[0].replace('\\u0026', '&')
+            file_name = f"nexus_{uuid.uuid4().hex[:5]}.mp4"
+            
+            # تحميل فعلي لضمان صلاحية الرابط للمستخدم
+            async with client.stream("GET", clean_url) as r:
+                async with aiofiles.open(file_name, "wb") as f:
+                    async for chunk in r.aiter_bytes():
+                        await f.write(chunk)
+            
+            size = round(os.path.getsize(file_name) / (1024*1024), 2)
+            return {"success": True, "video_url": f"/video/{file_name}", "size_mb": size, "method": "V7 Engine"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+@app.get("/video/{name}")
+async def get_video(name: str):
+    if os.path.exists(name): return FileResponse(name, media_type="video/mp4")
+    return JSONResponse(status_code=404, content={"error": "File expired"})
