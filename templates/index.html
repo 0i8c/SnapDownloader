@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>فحص يوزر X</title>
+
+<style>
+body {
+    background: #111;
+    color: white;
+    text-align: center;
+    font-family: Arial;
+}
+
+input {
+    padding: 10px;
+    width: 200px;
+}
+
+button {
+    padding: 10px;
+    background: #00acee;
+    color: white;
+    border: none;
+}
+
+#result {
+    margin-top: 20px;
+    font-size: 20px;
+}
+</style>
+
+</head>
+<body>
+
+<h1>🔥 فحص يوزر X</h1>
+
+<input id="username" placeholder="abc">
+<br><br>
+
+<button onclick="check()">فحص</button>
+
+<div id="result"></div>
+
+<script>
+async function check() {
+    let user = document.getElementById("username").value;
+
+    let res = await fetch("/check?username=" + user);
+    let data = await res.json();
+
+    if (data.status === "available") {
+        document.getElementById("result").innerHTML = "✅ متاح";
+    } else if (data.status === "taken") {
+        document.getElementById("result").innerHTML = "❌ مأخوذ";
+    } else {
+        document.getElementById("result").innerHTML = "⚠️ خطأ";
+    }
+}
+</script>
+
+</body>
+</html>
