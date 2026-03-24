@@ -2,6 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Downloader Pro</title>
 
 <style>
@@ -13,37 +14,38 @@
 }
 
 body {
-    height: 100vh;
+    min-height: 100vh;
     background: linear-gradient(135deg, #0f172a, #1e3a8a);
     display: flex;
     justify-content: center;
     align-items: center;
     color: white;
+    padding: 15px; /* مهم للجوال */
 }
 
 /* الكارد */
 .card {
-    width: 90%;
-    max-width: 420px;
-    background: rgba(15, 23, 42, 0.8);
+    width: 100%;
+    max-width: 380px;
+    background: rgba(15, 23, 42, 0.95);
     border-radius: 20px;
-    padding: 25px;
-    box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    padding: 20px;
+    box-shadow: 0 0 40px rgba(0,0,0,0.7);
 }
 
 /* العنوان */
 .title {
     text-align: center;
-    font-size: 20px;
-    margin-bottom: 20px;
+    font-size: 18px;
+    margin-bottom: 15px;
 }
 
 /* مربع الرابط */
 .input-box {
     background: #e5e7eb;
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 15px;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
 .input-box input {
@@ -51,23 +53,30 @@ body {
     border: none;
     outline: none;
     background: transparent;
+    font-size: 14px;
 }
 
-/* خيارات */
+/* الخيارات */
 .options {
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .option {
     flex: 1;
-    padding: 15px;
-    border-radius: 12px;
+    padding: 12px;
+    border-radius: 10px;
     background: #1e293b;
     text-align: center;
     cursor: pointer;
     border: 2px solid transparent;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.option:hover {
+    transform: scale(1.03);
 }
 
 .option.active {
@@ -77,25 +86,36 @@ body {
 /* زر */
 button {
     width: 100%;
-    padding: 15px;
-    border-radius: 12px;
+    padding: 13px;
+    border-radius: 10px;
     border: none;
     background: linear-gradient(135deg, #22c55e, #16a34a);
     color: white;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
+    transition: 0.2s;
+}
+
+button:hover {
+    transform: scale(1.02);
 }
 
 /* الملفات */
 .files {
-    margin-top: 20px;
+    margin-top: 15px;
+    font-size: 14px;
 }
 
 .file {
     display: flex;
     justify-content: space-between;
-    padding: 10px;
+    padding: 8px;
     border-bottom: 1px solid #334155;
+}
+
+.file a {
+    color: white;
+    text-decoration: none;
 }
 </style>
 
@@ -112,7 +132,6 @@ button {
     <input type="text" name="url" placeholder="أدخل الرابط هنا..." required>
 </div>
 
-<!-- اختيار الصيغة -->
 <div class="options">
     <div class="option active" onclick="selectFormat(this, 'mp4')">
         🎬 فيديو<br>MP4
@@ -133,7 +152,7 @@ button {
 
 {% for file in files %}
 <div class="file">
-    <a href="/files/{{file}}" style="color:white;">{{file}}</a>
+    <a href="/files/{{file}}" target="_blank">{{file}}</a>
 </div>
 {% endfor %}
 
