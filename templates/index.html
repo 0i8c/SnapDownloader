@@ -2,62 +2,86 @@
 <html lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>فحص يوزر X</title>
+<title>Downloader Pro</title>
 
 <style>
 body {
-    background: #111;
+    font-family: Arial;
+    background: #0f172a;
     color: white;
     text-align: center;
-    font-family: Arial;
+    padding: 40px;
 }
 
-input {
-    padding: 10px;
-    width: 200px;
+.container {
+    max-width: 600px;
+    margin: auto;
+    background: #1e293b;
+    padding: 30px;
+    border-radius: 15px;
 }
 
-button {
-    padding: 10px;
-    background: #00acee;
-    color: white;
+input, select {
+    width: 90%;
+    padding: 12px;
+    margin: 10px;
+    border-radius: 10px;
     border: none;
 }
 
-#result {
-    margin-top: 20px;
-    font-size: 20px;
+button {
+    padding: 12px 30px;
+    border: none;
+    background: #22c55e;
+    color: white;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #16a34a;
+}
+
+.file-box {
+    background: #334155;
+    margin: 10px;
+    padding: 10px;
+    border-radius: 10px;
 }
 </style>
 
 </head>
 <body>
 
-<h1>🔥 فحص يوزر X</h1>
+<div class="container">
 
-<input id="username" placeholder="abc">
-<br><br>
+<h2>🔥 Downloader Pro</h2>
 
-<button onclick="check()">فحص</button>
+<form method="POST" action="/download">
+    <input type="text" name="url" placeholder="الصق الرابط هنا..." required>
 
-<div id="result"></div>
+    <select name="format">
+        <option value="mp4">🎬 فيديو (MP4)</option>
+        <option value="mp3">🎧 صوت (MP3)</option>
+    </select>
 
-<script>
-async function check() {
-    let user = document.getElementById("username").value;
+    <br>
+    <button type="submit">تحميل</button>
+</form>
 
-    let res = await fetch("/check?username=" + user);
-    let data = await res.json();
+<hr>
 
-    if (data.status === "available") {
-        document.getElementById("result").innerHTML = "✅ متاح";
-    } else if (data.status === "taken") {
-        document.getElementById("result").innerHTML = "❌ مأخوذ";
-    } else {
-        document.getElementById("result").innerHTML = "⚠️ خطأ";
-    }
-}
-</script>
+<h3>📂 الملفات:</h3>
+
+{% for file in files %}
+<div class="file-box">
+    <a href="/files/{{file}}" target="_blank" style="color:white;">{{file}}</a>
+    <br>
+    <a href="/delete/{{file}}" style="color:red;">حذف</a>
+</div>
+{% endfor %}
+
+</div>
 
 </body>
 </html>
