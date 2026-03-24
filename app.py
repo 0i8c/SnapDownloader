@@ -1,35 +1,62 @@
-from flask import Flask, request, jsonify, render_template
-import requests
+from flask import Flask, request, render_template, send_from_directory, redirect
 import os
+import requests
+import subprocess
 
 app = Flask(__name__)
 
-# الصفحة الرئيسية
+DOWNLOAD_FOLDER = "downloads"
+
+if not os.path.exists(DOWNLOAD_FOLDER):
+    os.makedirs(DOWNLOAD_FOLDER)
+
 @app.route("/")
-def home():
-    return render_template("index.html")
+def index():
+    files = os.listdir(DOWNLOAD_FOLDER)
+    return render_template("index.html", files=files)
 
-# API لفحص اليوزر
-@app.route("/check")
-def check():
-    username = request.args.get("username")
+@app.route("/download", methods=["POST"])
+def download():
+    url = request.form.get("url")
+    format_type = request.form.get("format")
 
-    if not username:
-        return jsonify({"status": "error", "message": "no username"})
-
-    url = f"https://x.com/{username}"
+    if not url:
+        return redirect("/")
 
     try:
-        r = requests.get(url, timeout=5)
+        filename = url.split("/")[-1].split("?")[0]
+        file_path = os.path.join(DOWNLOAD_FOLDER, filename)
 
-        if r.status_code == 404:
-            return jsonify({"status": "available"})
-        else:
-            return jsonify({"status": "taken"})
+        r = requests.get(url, stream=True)
+        with open(file_path, "wb") as f:
+            for chunk in r.iter_content(1024):
+                f.write(chunk)
+
+        # 🎧 تحويل إلى MP3
+        if format_type == "mp3":
+            mp3_path = file_path + ".mp3"
+            subprocess.run([
+                "ffmpeg", "-i", file_path,
+                "-q:a", "0", "-map", "a",
+                mp3_path
+            ])
+            os.remove(file_path)
+
+        return redirect("/")
 
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)})
+        return f"خطأ: {e}"
 
-# تشغيل السيرفر (مهم لـ Render)
+@app.route("/files/<filename>")
+def files(filename):
+    return send_from_directory(DOWNLOAD_FOLDER, filename)
+
+@app.route("/delete/<filename>")
+def delete(filename):
+    path = os.path.join(DOWNLOAD_FOLDER, filename)
+    if os.path.exists(path):
+        os.remove(path)
+    return redirect("/")
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(debug=True)
