@@ -1,19 +1,24 @@
 import yt_dlp
-import os
 
 class UniversalDownloader:
-    def __init__(self, download_path="downloads"):
-        self.download_path = download_path
-        os.makedirs(download_path, exist_ok=True)
 
-    def download(self, url):
+    def get_direct_url(self, url):
         ydl_opts = {
-            'format': 'best',
-            'outtmpl': f'{self.download_path}/%(title)s.%(ext)s',
+            'format': 'best[ext=mp4]/best',
             'quiet': True,
             'no_warnings': True,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            return ydl.prepare_filename(info)
+            info = ydl.extract_info(url, download=False)
+
+            # نجيب رابط التحميل المباشر
+            if 'url' in info:
+                return info['url']
+
+            if 'formats' in info:
+                for f in info['formats']:
+                    if f.get('ext') == 'mp4':
+                        return f.get('url')
+
+        return None
