@@ -17,16 +17,12 @@ def index():
 @app.route("/download", methods=["POST"])
 def download_route():
     url = request.form.get("url")
-    format_type = request.form.get("format")
 
     if not url:
         return redirect("/")
 
     try:
-        if format_type == "mp3":
-            downloader.download(url, "audio")
-        else:
-            downloader.download(url, "video")
+        downloader.download(url)
     except Exception as e:
         print(e)
 
