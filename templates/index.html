@@ -20,7 +20,7 @@ body {
     justify-content: center;
     align-items: center;
     color: white;
-    padding: 15px; /* مهم للجوال */
+    padding: 15px;
 }
 
 /* الكارد */
@@ -64,23 +64,13 @@ body {
 }
 
 .option {
-    flex: 1;
+    width: 100%;
     padding: 12px;
     border-radius: 10px;
     background: #1e293b;
     text-align: center;
-    cursor: pointer;
-    border: 2px solid transparent;
+    border: 2px solid #22c55e;
     font-size: 14px;
-    transition: 0.2s;
-}
-
-.option:hover {
-    transform: scale(1.03);
-}
-
-.option.active {
-    border-color: #22c55e;
 }
 
 /* زر */
@@ -132,16 +122,12 @@ button:hover {
     <input type="text" name="url" placeholder="أدخل الرابط هنا..." required>
 </div>
 
+<!-- خيار واحد فقط -->
 <div class="options">
-    <div class="option active" onclick="selectFormat(this, 'mp4')">
-        🎬 فيديو<br>MP4
-    </div>
-    <div class="option" onclick="selectFormat(this, 'mp3')">
-        🎧 صوت<br>MP3
+    <div class="option">
+        🎬 تحميل فيديو (MP4)
     </div>
 </div>
-
-<input type="hidden" name="format" id="format" value="mp4">
 
 <button type="submit">تحميل</button>
 
@@ -159,14 +145,6 @@ button:hover {
 </div>
 
 </div>
-
-<script>
-function selectFormat(el, type) {
-    document.querySelectorAll('.option').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('format').value = type;
-}
-</script>
 
 </body>
 </html>
