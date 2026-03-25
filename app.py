@@ -1,43 +1,33 @@
-from flask import Flask, request, render_template, send_from_directory, redirect
+from flask import Flask, request, render_template, redirect
 import os
 from downloader import UniversalDownloader
 
 app = Flask(__name__)
 
-DOWNLOAD_FOLDER = "downloads"
-os.makedirs(DOWNLOAD_FOLDER, exist_ok=True)
-
-downloader = UniversalDownloader(DOWNLOAD_FOLDER)
+downloader = UniversalDownloader()
 
 @app.route("/")
 def index():
-    files = os.listdir(DOWNLOAD_FOLDER)
-    return render_template("index.html", files=files)
+    return render_template("index.html")
 
 @app.route("/download", methods=["POST"])
 def download_route():
     url = request.form.get("url")
 
     if not url:
-        return redirect("/")
+        return "❌ حط رابط"
 
     try:
-        downloader.download(url)
+        direct_url = downloader.get_direct_url(url)
+
+        if not direct_url:
+            return "❌ ما قدرنا نحصل رابط التحميل"
+
+        # 🔥 هنا السر: نحول المستخدم مباشرة للرابط
+        return redirect(direct_url)
+
     except Exception as e:
-        print(e)
-
-    return redirect("/")
-
-@app.route("/files/<filename>")
-def files(filename):
-    return send_from_directory(DOWNLOAD_FOLDER, filename)
-
-@app.route("/delete/<filename>")
-def delete(filename):
-    path = os.path.join(DOWNLOAD_FOLDER, filename)
-    if os.path.exists(path):
-        os.remove(path)
-    return redirect("/")
+        return f"❌ خطأ: {e}"
 
 if __name__ == "__main__":
     app.run(debug=True)
